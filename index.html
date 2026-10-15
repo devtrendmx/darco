@@ -409,14 +409,21 @@
         margin: 0 !important;
     }
 
-    /* DIAGRAM */
-    .diagram {
+    /* MERMAID DIAGRAM CONTAINER */
+    .mermaid-container {
         margin: 24px 0;
         padding: 32px;
         background: var(--bg-card);
         border: 1px solid var(--line);
-        font-family: 'Inter', sans-serif;
-        font-size: 0.9rem;
+        border-radius: 4px;
+        display: flex;
+        justify-content: center;
+        overflow-x: auto;
+    }
+
+    .mermaid-container svg {
+        max-width: 100%;
+        height: auto;
     }
 
     .diagram-title {
@@ -424,38 +431,8 @@
         letter-spacing: 2.5px;
         text-transform: uppercase;
         color: var(--ink-muted);
-        margin-bottom: 20px;
+        margin-bottom: 16px;
         font-weight: 600;
-    }
-
-    .flow-step {
-        display: flex;
-        align-items: flex-start;
-        gap: 20px;
-        padding: 12px 0;
-        border-bottom: 1px dashed var(--line);
-    }
-
-    .flow-step:last-child {
-        border-bottom: none;
-    }
-
-    .flow-num {
-        font-family: 'Cormorant Garamond', serif;
-        font-size: 1.3rem;
-        color: var(--accent);
-        font-weight: 500;
-        min-width: 30px;
-    }
-
-    .flow-text {
-        color: var(--ink-soft);
-        flex: 1;
-    }
-
-    .flow-text strong {
-        color: var(--ink);
-        font-weight: 500;
     }
 
     /* CODE */
@@ -699,29 +676,53 @@
             </div>
         </div>
 
-        <div class="question">
+        <div class="question active">
             <div class="question-header">
                 <span class="question-label">Diagrama del flujo de información</span>
                 <span class="question-toggle"></span>
             </div>
             <div class="answer">
                 <div class="answer-inner">
-                    <div class="diagram">
-                        <div class="diagram-title">Flujo de consulta</div>
-                        <div class="flow-step"><span class="flow-num">01</span><span class="flow-text"><strong>Usuario hace una pregunta</strong> en lenguaje natural.</span></div>
-                        <div class="flow-step"><span class="flow-num">02</span><span class="flow-text"><strong>Se verifica el permiso</strong> del usuario para acceder a ciertos documentos.</span></div>
-                        <div class="flow-step"><span class="flow-num">03</span><span class="flow-text">La pregunta se convierte en un <strong>código numérico</strong> (embedding).</span></div>
-                        <div class="flow-step"><span class="flow-num">04</span><span class="flow-text">Se buscan los <strong>fragmentos más relevantes</strong>, filtrados por permiso.</span></div>
-                        <div class="flow-step"><span class="flow-num">05</span><span class="flow-text">Se <strong>reordenan</strong> para priorizar los mejores resultados.</span></div>
-                        <div class="flow-step"><span class="flow-num">06</span><span class="flow-text">El modelo genera la respuesta <strong>con citas a la fuente</strong>.</span></div>
-                        <div class="flow-step"><span class="flow-num">07</span><span class="flow-text">El usuario recibe la respuesta <strong>+ fuentes</strong>.</span></div>
-                    </div>
-                    <div class="diagram">
-                        <div class="diagram-title">Flujo de carga de documentos (se hace una sola vez)</div>
-                        <div class="flow-step"><span class="flow-num">01</span><span class="flow-text">Se sube el <strong>PDF</strong>.</span></div>
-                        <div class="flow-step"><span class="flow-num">02</span><span class="flow-text">Se extrae <strong>texto y tablas</strong> (con OCR si es necesario).</span></div>
-                        <div class="flow-step"><span class="flow-num">03</span><span class="flow-text">Se divide en <strong>fragmentos</strong> con etiquetas (página, autor, departamento).</span></div>
-                        <div class="flow-step"><span class="flow-num">04</span><span class="flow-text">Se guarda en la <strong>base de datos vectorial</strong>.</span></div>
+                    <p>El sistema opera mediante dos flujos principales: la ingesta de documentos (que se realiza una sola vez o de forma incremental) y el flujo de consulta del usuario en tiempo real.</p>
+                    
+                    <div class="diagram-title">Flujo de consulta y procesamiento</div>
+                    <div class="mermaid-container">
+                        <div class="mermaid">
+graph TD
+  %% Nodes
+  U([Usuario hace una pregunta])
+  P{Verificación de permisos}
+  E[Conversión a Embedding]
+  S[Búsqueda híbrida en Vector DB]
+  R[Reranking de resultados]
+  L[LLM genera respuesta con citas]
+  F([Usuario recibe respuesta + fuentes])
+
+  %% Ingestion Flow
+  subgraph Ingesta [Flujo de Carga de Documentos]
+    direction TB
+    I1[PDF Subido] --> I2[Extracción de texto/tablas con OCR]
+    I2 --> I3[Chunking + Metadatos pág/depto]
+    I3 --> I4[(Base de Datos Vectorial)]
+  end
+
+  %% Query Flow
+  U --> P
+  P -->|Autorizado| E
+  P -->|No autorizado| X[Acceso denegado]
+  E --> S
+  S --> R
+  R --> L
+  L --> F
+
+  %% Styling
+  classDef default fill:#ffffff,stroke:#d9d3c7,stroke-width:1.5px,color:#1a1a1a,font-family:'Inter',sans-serif,font-size:14px;
+  classDef startEnd fill:#faf6ef,stroke:#b85c38,stroke-width:2px,color:#8f4527,font-family:'Inter',sans-serif,font-weight:600;
+  classDef db fill:#f4f1ec,stroke:#3d5a47,stroke-width:1.5px,color:#1a1a1a,font-family:'Inter',sans-serif;
+
+  class U,F startEnd;
+  class I4 db;
+                        </div>
                     </div>
                 </div>
             </div>
@@ -928,7 +929,30 @@
 
 </div>
 
+<!-- Mermaid JS for Diagrams -->
+<script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ 
+        startOnLoad: true, 
+        theme: 'base',
+        themeVariables: {
+            primaryColor: '#f4f1ec',
+            primaryTextColor: '#1a1a1a',
+            primaryBorderColor: '#d9d3c7',
+            lineColor: '#8a8580',
+            secondaryColor: '#faf6ef',
+            tertiaryColor: '#ffffff',
+            fontFamily: 'Inter, sans-serif'
+        },
+        flowchart: {
+            curve: 'basis',
+            padding: 20
+        }
+    });
+</script>
+
 <script>
+    // Funcionalidad de acordeón: abrir/cerrar preguntas
     document.querySelectorAll('.question').forEach(q => {
         q.addEventListener('click', () => {
             q.classList.toggle('active');
